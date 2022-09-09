@@ -182,25 +182,19 @@ class data_set(Dataset):
                 sample_x = self.data_x.iloc[start_index:end_index, 1:-1].values
                 other_x = self.data_x.iloc[other_start:other_end, 1:-1].values
 
-            sample_y = self.class_transform[self.data_y.iloc[start_index:end_index].mode().loc[0]]
-            other_y = self.class_transform[self.data_y.iloc[other_start:other_end].mode().loc[0]]
+            # sample_y = self.class_transform[self.data_y.iloc[start_index:end_index].mode().loc[0]]
             encoded_y = self.one_hot_encoding[self.data_y.iloc[start_index:end_index].mode().loc[0]]
-            other_enc_y = self.one_hot_encoding[self.data_y.iloc[other_start:other_end].mode().loc[0]]
-            # print('original label', sample_y)
-            # print('one hot encoded, ', encoded_y)
-            # print('other label', other_y)
-            # print('other one hot encoded', other_enc_y)
             
+            sample_x = np.expand_dims(sample_x,0)
             
+            if self.flag != 'train':
+                return sample_x, encoded_y, encoded_y
+            
+            other_encoded_y = self.one_hot_encoding[self.data_y.iloc[other_start:other_end].mode().loc[0]]
             
             mixup_x = mixup(sample_x, other_x, 0.6)
-            mixup_y = mixup(encoded_y, other_enc_y, 0.6)
-            # print('mixup one hot encoded', mixup_y)
-            # print('mixup categorical label', self.inverse_hot_encoding(mixup_y))
-            
-            # self.inverse_hot_encoding(mixup_y)
-            sample_x = np.expand_dims(sample_x,0)
-            mixup_x = np.expand_dims(mixup_x,0)
+            mixup_x = np.expand_dims(mixup_x, 0)
+            mixup_y = mixup(encoded_y, other_encoded_y, 0.6)
 
             from dataloaders.augmentation import RandomAugment
 
@@ -212,11 +206,8 @@ class data_set(Dataset):
             self.used_randaugs_per_idx[index] = used_augs
             self.mixup_combinations_per_idx[index] = rand_idx
             # return (sample_x, aug_sample_x), sample_y, sample_y
-            # return sample_x, sample_y, sample_y
-            # print(encoded_y)
-            # return sample_x, encoded_y, encoded_y
-            # return aug_sample_x, mixup_y, mixup_y
-            return sample_x, encoded_y, encoded_y
+            
+            return aug_sample_x, mixup_y, mixup_y
             
 
         elif self.args.representation_type == "freq":
