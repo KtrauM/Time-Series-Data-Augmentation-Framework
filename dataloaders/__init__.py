@@ -210,36 +210,8 @@ class data_set(Dataset):
             return aug_sample_x, mixup_y, mixup_y
             
 
-        elif self.args.representation_type == "freq":
-
-            if self.load_all:
-                    sample_x = self.data_freq[self.freq_file_name[index]]
-            else:
-                with open(os.path.join(self.freq_path,"{}.pickle".format(self.freq_file_name[index])), 'rb') as handle:
-                    sample_x = pickle.load(handle)
-
-            sample_y = self.class_transform[self.data_y.iloc[start_index:end_index].mode().loc[0]]
-
-            return sample_x, sample_y,sample_y
-
         else:
-
-            if self.args.sample_wise ==True:
-                sample_ts_x = np.array(self.data_x.iloc[start_index:end_index, 1:-1].apply(lambda x: (x - np.mean(x)) / (np.max(x) - np.min(x))))
-            else:
-                sample_ts_x = self.data_x.iloc[start_index:end_index, 1:-1].values
-
-
-            if self.load_all:
-                    sample_fq_x = self.data_freq[self.freq_file_name[index]]
-            else:
-                with open(os.path.join(self.freq_path,"{}.pickle".format(self.freq_file_name[index])), 'rb') as handle:
-                    sample_fq_x = pickle.load(handle)
-
-            sample_y = self.class_transform[self.data_y.iloc[start_index:end_index].mode().loc[0]]
-
-
-            return sample_ts_x, sample_fq_x , sample_y
+            raise NotImplementedError()
 
     def __len__(self):
         return len(self.window_index)

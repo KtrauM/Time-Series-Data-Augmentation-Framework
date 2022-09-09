@@ -261,12 +261,7 @@ class Exp(object):
                             loss = criterion(outputs, batch_y)
 
                         if self.args.wavelet_filtering and self.args.wavelet_filtering_regularization:
-                            reg_loss = 0
-                            for name,parameter in self.model.named_parameters():
-                                if "gamma" in name:
-                                    reg_loss += torch.sum(torch.abs(parameter))
-
-                            loss = loss + self.args.regulatization_tradeoff*reg_loss
+                            raise NotImplementedError()
 
 
                         train_loss.append(loss.item())
@@ -319,114 +314,7 @@ class Exp(object):
             # ------------------------------ code for  regularization and fine tuning -----------------------------------------------------------------
 
             if self.args.wavelet_filtering_finetuning:
-                finetuned_score_log_file_name = os.path.join(self.path, "finetuned_score.txt")
-                if skip_finetuning:
-                    print("================Skip the {} CV Experiment Fine Tuning================".format(iter))
-                else:
-                    # thre_index : selected number
-                    epoch_log = open(epoch_log_file_name, "a")
-                    epoch_log.write("----------------------------------------------------------------------------------------\n")
-                    epoch_log.write("--------------------------------------Fine Tuning-----------------------------------------\n")
-                    epoch_log.write("----------------------------------------------------------------------------------------\n")
-
-                    self.model  = self.build_model().to(self.device)
-                    self.model.load_state_dict(torch.load(cv_path+'/'+'final_best_vali.pth'))
-
-                    finetuned_score_log = open(finetuned_score_log_file_name, "a")
-
-                    thre_index             = int(self.args.f_in * self.args.wavelet_filtering_finetuning_percent)
-                    gamma_weight           = self.model.gamma.squeeze().abs().clone()
-                    sorted_gamma_weight, i = torch.sort(gamma_weight,descending=True)
-                    threshold              = sorted_gamma_weight[thre_index]
-                    mask                   = gamma_weight.data.gt(threshold).float().to(self.device)
-                    idx0                   = np.squeeze(np.argwhere(np.asarray(mask.cpu().numpy())))
-                    # build the new model
-                    new_model              = model_builder(self.args, input_f_channel = thre_index)
-                    print("+++++++++++++++++++++++++++++++++",new_model.gamma.shape)
-                    print("------------Fine Tuning  : ", self.args.f_in-thre_index,"  will be pruned   -----------------------------------------")
-                    print("old model Parameter :", self.model_size)
-                    print("pruned model Parameter :", np.sum([para.numel() for para in new_model.parameters()]))
-                    print("----------------------------------------------------------------------------------------")
-                    # copy the weights
-                    flag_channel_selection = False
-                    for n,p in new_model.named_parameters():
-                        if "wavelet_conv" in n:
-                            p.data = self.model.state_dict()[n].data[idx0.tolist(), :,:,:].clone()
-                        elif n == "gamma" or flag_channel_selection:
-                            p.data = self.model.state_dict()[n].data[:, idx0.tolist(),:,:].clone()
-                            if n == "gamma":
-                                # set for the next channel 
-                                flag_channel_selection = True
-                            else:
-                                flag_channel_selection = False
-                        else:
-                            p.data = self.model.state_dict()[n].data.clone()
-                    print("+++++++++++++++++++++++++++++++++",new_model.gamma.shape)
-                    early_stopping        = EarlyStopping(patience=5, verbose=True)
-                    learning_rate_adapter = adjust_learning_rate_class(self.args,True)
-                    model_optim           = optim.Adam(new_model.parameters(), lr=0.0001)
-                    criterion             = nn.CrossEntropyLoss(reduction="mean").to(self.device)
-                    for epoch in range(self.args.train_epochs):
-                        train_loss = []
-                        new_model.train()
-                        epoch_time = time.time()
-
-                        for i, (batch_x1,batch_x2,batch_y) in enumerate(train_loader):
-                            batch_x1 = batch_x1.double().to(self.device)
-
-                            print('exp')
-                            print(type(batch_y))
-                            print(batch_y)
-                            batch_y = batch_y.float().to(self.device)
-                            print(type(batch_y))
-                            print(batch_y)
-                            outputs = new_model(batch_x1)
-
-                            loss = criterion(outputs, batch_y)
-
-                            train_loss.append(loss.item())
-
-                            model_optim.zero_grad()
-                            loss.backward()
-                            model_optim.step()
-
-                        print("Fine Tuning Epoch: {} cost time: {}".format(epoch+1, time.time()-epoch_time))
-                        epoch_log.write("Fine Tuning Epoch: {} cost time: {}".format(epoch+1, time.time()-epoch_time))
-                        epoch_log.write("\n")
-
-                        train_loss = np.average(train_loss)
-                        vali_loss , vali_acc, vali_f_w,  vali_f_macro,  vali_f_micro = self.validation(new_model, val_loader, criterion)
-
-                        print("Fine Tuning VALI: Epoch: {0}, Steps: {1} | Train Loss: {2:.7f}  Vali Loss: {3:.7f} Vali Accuracy: {4:.7f}  Vali weighted F1: {5:.7f}  Vali macro F1 {6:.7f} ".format(
-                            epoch + 1, train_steps, train_loss, vali_loss, vali_acc, vali_f_w, vali_f_macro))
-
-                        epoch_log.write("Fine Tuning VALI: Epoch: {0}, Steps: {1} | Train Loss: {2:.7f}  Vali Loss: {3:.7f} Vali Accuracy: {4:.7f}  Vali weighted F1: {5:.7f}  Vali macro F1 {6:.7f} \n".format(
-                            epoch + 1, train_steps, train_loss, vali_loss, vali_acc, vali_f_w, vali_f_macro))
-
-
-                        early_stopping(vali_loss, new_model, cv_path, vali_f_macro, vali_f_w, epoch_log)
-                        if early_stopping.early_stop:
-                            print("Early stopping")
-                            break
-                        epoch_log.write("----------------------------------------------------------------------------------------\n")
-                        epoch_log.flush()
-                        learning_rate_adapter(model_optim,vali_loss)
-                    # rename the best_vali to final_best_vali
-                    os.rename(cv_path+'/'+'best_vali.pth', cv_path+'/'+'final_finetuned_best_vali.pth')
-
-                    print("Loading the best finetuned validation model!")
-                    new_model.load_state_dict(torch.load(cv_path+'/'+'final_finetuned_best_vali.pth'))
-
-                    test_loss , test_acc, test_f_w,  test_f_macro,  test_f_micro = self.validation(new_model, test_loader, criterion)
-                    print("Fine Tuning Final Test Performance : Test Accuracy: {0:.7f}  Test weighted F1: {1:.7f}  Test macro F1 {2:.7f} ".format (test_acc, test_f_w, test_f_macro))
-                    epoch_log.write("Final Test Performance : Test weighted F1: {0:.7f}  Test macro F1 {1:.7f}\n\n\n\n\n\n\n\n".format(test_f_w, test_f_macro))
-                    epoch_log.flush()
-
-                    finetuned_score_log.write("Test weighted F1: {0:.7f}  Test macro F1 {1:.7f}\n".format(test_f_w, test_f_macro))
-                    finetuned_score_log.flush()
-
-                    epoch_log.close()
-                    finetuned_score_log.close()
+                raise NotImplementedError()
 
 
 
