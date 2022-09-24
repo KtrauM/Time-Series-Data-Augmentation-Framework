@@ -71,7 +71,7 @@ data_dict = {"hapt"  : HAPT_HAR_DATA,
              "skodar": SkodaR_HAR_DATA}
 
 class data_set(Dataset):
-    def __init__(self, args, dataset, flag):
+    def __init__(self, args, dataset, flag, dist):
         """
         args : a dict , In addition to the parameters for building the model, the parameters for reading the data are also in here
         dataset : It should be implmented dataset object, it contarins train_x, train_y, vali_x,vali_y,test_x,test_y
@@ -82,19 +82,7 @@ class data_set(Dataset):
         self.load_all = args.load_all
         self.data_x = dataset.normalized_data_x
         self.data_y = dataset.data_y
-        self.p = {
-            'jitter': 1.0,
-            'exponential_smoothing': 1.0,
-            'moving_average': 1.0,
-            'magnitude_scaling': 1.0,
-            'magnitude_warp': 1.0,
-            'magnitude_shift': 1.0,
-            'time_warp': 1.0,
-            'window_warp': 1.0,
-            'window_slice': 1.0,
-            'random_sampling': 1.0,
-            'slope_adding': 1.0,
-        }
+        self.p = dist
         self.mixup_combinations_per_idx = {}
         self.used_randaugs_per_idx = {}
         if flag in ["train","vali"]:

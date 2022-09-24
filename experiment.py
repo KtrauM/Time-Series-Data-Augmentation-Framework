@@ -71,32 +71,36 @@ class Exp(object):
         criterion = self.criterion_dict[self.args.criterion]()
         return criterion
 
-    def _get_data(self, data, flag="train", weighted_sampler = False):
+    def _get_data(self, data, flag="train", weighted_sampler = False, probabilities=None):
         if flag == 'train':
             shuffle_flag = True 
         else:
             shuffle_flag = False
-
-        data  = data_set(self.args,data,flag)
-        if weighted_sampler and flag == 'train':
-
-            sampler = WeightedRandomSampler(
-                data.act_weights, len(data.act_weights)
-            )
-
-            data_loader = DataLoader(data, 
-                                     batch_size   =  self.args.batch_size,
-                                     #shuffle      =  shuffle_flag,
-                                     num_workers  =  0,
-                                     sampler=sampler,
-                                     drop_last    =  False)
+        if weighted_sampler:
+            raise NotImplementedError()
+        
+        augs = ['jitter', 'exponential_smoothing', 'moving_average', 'magnitude_scaling', 'magnitude_warp',
+                'magnitude_shift', 'time_warp', 'window_warp', 'window_slice', 'random_sampling', 'slope_adding',
+                ]
+        if probabilities == None:
+            aug_dist = dict(zip(augs, [0.0 for _ in augs]))
         else:
-            data_loader = DataLoader(data, 
-                                     batch_size   =  self.args.batch_size,
-                                     shuffle      =  shuffle_flag,
-                                     num_workers  =  0,
-                                     drop_last    =  False)
+            aug_dist = dict(zip(augs, probabilities))
+        data  = data_set(self.args,data,flag, aug_dist)
+        data_loader = DataLoader(data,
+                                 batch_size=self.args.batch_size,
+                                 shuffle=shuffle_flag,
+                                 num_workers=0,
+                                 drop_last=False)
         return data_loader
+
+    def efficient_zero_grad(model):
+        """ 
+        Apply zero_grad more efficiently
+        Source: https://betterprogramming.pub/how-to-make-your-pytorch-code-run-faster-93079f3c1f7b
+        """
+        for param in model.parameters():
+            param.grad = None
 
 
     def get_setting_name(self):
@@ -208,7 +212,7 @@ class Exp(object):
                 if self.args.mixup:
                      print(" Using Mixup Training")				
                 self.model  = self.build_model().to(self.device)
-
+                self.augnet = self.build_model().to(self.device)
 
 
 
@@ -216,7 +220,7 @@ class Exp(object):
                 early_stopping        = EarlyStopping(patience=self.args.early_stop_patience, verbose=True)
                 learning_rate_adapter = adjust_learning_rate_class(self.args,True)
                 model_optim = self._select_optimizer()
-
+                augnet_optim = self._select_optimizer()
                 #if self.args.weighted == True:
                 #    criterion =  nn.CrossEntropyLoss(reduction="mean",weight=class_weights).to(self.device)#self._select_criterion()
                 #else:
@@ -229,46 +233,35 @@ class Exp(object):
                     train_loss = []
                     self.model.train()
                     epoch_time = time.time()
-
-                    for i, (batch_x1,batch_x2,batch_y) in enumerate(train_loader):
-
-                        if "cross" in self.args.model_type:
-                            batch_x1 = batch_x1.double().to(self.device)
-                            batch_x2 = batch_x2.double().to(self.device)
-                            batch_y = batch_y.float().to(self.device)
-                            # model prediction
-                            if self.args.output_attention:
-                                outputs = self.model(batch_x1,batch_x2)[0]
-                            else:
-                                outputs = self.model(batch_x1,batch_x2)
-                        else:
-                            batch_x1 = batch_x1.double().to(self.device)
-                            batch_y = batch_y.float().to(self.device)
-
-                            if self.args.mixup:
-                                batch_x1, batch_y = mixup_data(batch_x1, batch_y, self.args.alpha)
-
-                            # model prediction
-                            if self.args.output_attention:
-                                outputs = self.model(batch_x1)[0]
-                            else:
-                                outputs = self.model(batch_x1)
-
-                        if self.args.mixup:
-                            criterion = MixUpLoss(criterion)
-                            loss = criterion(outputs, batch_y)
-                        else:
-                            loss = criterion(outputs, batch_y)
-
-                        if self.args.wavelet_filtering and self.args.wavelet_filtering_regularization:
-                            raise NotImplementedError()
-
-
-                        train_loss.append(loss.item())
-
+                    
+                    
+                    for i, (raw_batch_x1, raw_batch_x2, raw_batch_y) in range(train_loader):
+                        #################### Generator ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                        probabilities = generator(raw_batch_x1)
+                        probabilities = F.gumbel_softmax(probabilities)
+                        
+                        ##################### Discriminator with Random Augmentation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                        batch_x1 = raw_batch_x1.double().to(self.device)
+                        batch_y = raw_batch_y.float().to(self.device)
+                        outputs = self.model(batch_x1)
+                        original_loss = criterion(outputs, batch_y)
+                        # train_loss.append(original_loss.item())
                         model_optim.zero_grad()
-                        loss.backward()
+                        original_loss.backward()
+                        
+                        ################## Discriminator with Adverserial Augmentation ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                        # actual_batch_size = batch_x1.size(dim=0)
+                        # noise_dimension = 20
+                        # noise = torch.randn(actual_batch_size, noise_dimension, device=self.device)
+                        
+                        batch_x1 = apply_augmentations(raw_batch_x1, outputs_probabilities)
+                        
+                        ####################### Train Generator with losses of random/adverserial augmentation
+                        
                         model_optim.step()
+
+                        
+                    
 
                     print("Epoch: {} cost time: {}".format(epoch+1, time.time()-epoch_time))
                     epoch_log.write("Epoch: {} cost time: {}".format(epoch+1, time.time()-epoch_time))
@@ -284,12 +277,13 @@ class Exp(object):
                         epoch + 1, train_steps, train_loss, vali_loss, vali_acc, vali_f_w, vali_f_macro))
 
 
-                    early_stopping(vali_loss, self.model, cv_path, vali_f_macro, vali_f_w, epoch_log)
+                    early_stopping(vali_loss, self.model, self.augnet, cv_path, vali_f_macro, vali_f_w, epoch_log)
                     if early_stopping.early_stop:
                         print("Early stopping")
                         break
                     epoch_log.write("----------------------------------------------------------------------------------------\n")
                     epoch_log.flush()
+                    train_loader = self._get_data(dataset, flag = 'train', weighted_sampler = self.args.weighted_sampler, )
                     learning_rate_adapter(model_optim,vali_loss)
 
 
@@ -364,36 +358,22 @@ class Exp(object):
 
 
 
-    def validation(self, model, data_loader, criterion, index_of_cv=None, selected_index = None):
+    def validation(self, model, augnet, data_loader, criterion, index_of_cv=None, selected_index = None):
         model.eval()
+        augnet.eval()
         total_loss = []
         preds = []
         trues = []
         with torch.no_grad():
             for i, (batch_x1,batch_x2,batch_y) in enumerate(data_loader):
 
-                if "cross" in self.args.model_type:
+                
+                if selected_index is None:
                     batch_x1 = batch_x1.double().to(self.device)
-                    batch_x2 = batch_x2.double().to(self.device)
-                    batch_y = batch_y.float().to(self.device)
-                    # model prediction
-                    if self.args.output_attention:
-                        outputs = model(batch_x1,batch_x2)[0]
-                    else:
-                        outputs = model(batch_x1,batch_x2)
                 else:
-                    if selected_index is None:
-                        batch_x1 = batch_x1.double().to(self.device)
-                    else:
-                        batch_x1 = batch_x1[:, selected_index.tolist(),:,:].double().to(self.device)
-                    batch_y = batch_y.float().to(self.device)
-
-                    # model prediction
-                    if self.args.output_attention:
-                        outputs = model(batch_x1)[0]
-                    else:
-                        outputs = model(batch_x1)
-
+                    batch_x1 = batch_x1[:, selected_index.tolist(),:,:].double().to(self.device)
+                batch_y = batch_y.float().to(self.device)
+                outputs = model(batch_x1)
 
                 pred = outputs.detach()#.cpu()
                 true = batch_y.detach()#.cpu()
@@ -402,14 +382,9 @@ class Exp(object):
                 total_loss.append(loss.cpu())
 				
                 preds.extend(list(np.argmax(outputs.detach().cpu().numpy(),axis=1)))
-                trues.extend(list(np.argmax(batch_y.detach().cpu().numpy(),axis=1)))  # not sure about the side-effects
+                trues.extend(list(batch_y.detach().cpu().numpy())) 
 				
         total_loss = np.average(total_loss)
-        # print(type(preds))
-        # print(preds)
-        # print('-----------')
-        # print(type(trues))
-        # print(trues)
         acc = accuracy_score(preds,trues)
         #f_1 = f1_score(trues, preds)
         f_w = f1_score(trues, preds, average='weighted')
@@ -423,6 +398,7 @@ class Exp(object):
             sns.heatmap(cf_matrix, annot=True)
             #plt.savefig("{}.png".format(index_of_cv))
         model.train()
+        augnet.train()
 
         return total_loss,  acc, f_w,  f_macro, f_micro#, f_1
 
