@@ -227,7 +227,7 @@ class Exp(object):
                 #    criterion =  nn.CrossEntropyLoss(reduction="mean").to(self.device)#self._select_criterion()
                 criterion =  nn.CrossEntropyLoss(reduction="mean").to(self.device)
 
-
+                from dataloaders.augmentation import RandomAugment
 
                 for epoch in range(self.args.train_epochs):
                     train_loss = []
@@ -235,30 +235,71 @@ class Exp(object):
                     epoch_time = time.time()
                     
                     
-                    for i, (raw_batch_x1, raw_batch_x2, raw_batch_y) in range(train_loader):
-                        #################### Generator ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                        probabilities = generator(raw_batch_x1)
-                        probabilities = F.gumbel_softmax(probabilities)
+                    for i, (raw_batch_x1, raw_batch_x2, raw_batch_y) in enumerate(train_loader):
+                        #################### Generator??? ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                         
-                        ##################### Discriminator with Random Augmentation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+                        ##################### Train discriminator with Random Augmentations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                         batch_x1 = raw_batch_x1.double().to(self.device)
                         batch_y = raw_batch_y.float().to(self.device)
                         outputs = self.model(batch_x1)
-                        original_loss = criterion(outputs, batch_y)
-                        # train_loss.append(original_loss.item())
+                        rndaug_loss = criterion(outputs, batch_y)
+                        # train_loss.append(rndaug_loss.item())
                         model_optim.zero_grad()
-                        original_loss.backward()
+                        rndaug_loss.backward()
+                        # model_optim.step() # should i put it here?
                         
-                        ################## Discriminator with Adverserial Augmentation ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                        # actual_batch_size = batch_x1.size(dim=0)
-                        # noise_dimension = 20
-                        # noise = torch.randn(actual_batch_size, noise_dimension, device=self.device)
+
+                        ################### Generate Adverserial Augmentations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+                        batch_x1 = raw_batch_x1.double().to(self.device)
+                        batch_y = raw_batch_y.float().to(self.device)
+                        aug_distribution = self.augnet(batch_x1)
+                        aug_distribution = F.gumbel_softmax(aug_distribution)
+                        apply_aug = lambda t: RandomAugment.jitter(t, 0.3) # use aug_distribution here
+                        batch_x1 = raw_batch_x1.detach().numpy()
+                        # print('org', batch_x1.shape)
+                        # print(np.asarray([aug_raw_batch_x1[0][0], aug_raw_batch_x1[1][0]]).shape)
+                        # aug_raw_batch_x1 = apply_aug(np.asarray([aug_raw_batch_x1[0][0], aug_raw_batch_x1[1][0]]))
+
+                        ################## Apply Adverserial Augmentations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                        aug_raw_batch_x1 = []
+                        for i, x1 in enumerate(batch_x1):
+                            augmented_x1 = apply_aug(x1[0])
+                            aug_raw_batch_x1.append([augmented_x1])
+                            if i==0:
+                                # print(x1)
+                                # print('-----------------')
+                                # print(aug_raw_batch_x1[i])
+                                print(x1[0][:,0])
+                                print('-----------------')
+                                print(augmented_x1[:,0])
+                                import matplotlib.pyplot as plt
+                                plt.figure(figsize=(6,3))
+                                plt.plot(x1[0][:,0],c = 'red', linewidth=2, label='orig')
+                                plt.plot(augmented_x1[:,0],c = 'blue', linewidth=2, label='aug', linestyle='dashed')
+                                plt.legend(fontsize=16)
+                                plt.tight_layout()
+                                plt.xticks(fontsize=12)
+                                plt.yticks(fontsize=12)
+                                plt.show()
+                        aug_raw_batch_x1 = np.asarray(aug_raw_batch_x1)
+                        ################## Train discriminator with Adverserial Augmentations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                         
-                        batch_x1 = apply_augmentations(raw_batch_x1, outputs_probabilities)
+                        # print('aug', aug_raw_batch_x1.shape)
+                        aug_batch_x1 = torch.from_numpy(aug_raw_batch_x1).double().to(self.device)
+                        batch_y = raw_batch_y.float().to(self.device)
+                        outputs = self.model(aug_batch_x1)
+                        advaug_loss = criterion(outputs, batch_y)
+                        model_optim.zero_grad()
+                        advaug_loss.backward()
+                        # model_optim.step() # should i step here?
                         
-                        ####################### Train Generator with losses of random/adverserial augmentation
-                        
-                        model_optim.step()
+                        ####################### Train Generator with losses of Random/Adverserial Augmentations
+                        if advaug_loss > rndaug_loss: # adverserial generated harder augmentation
+                            # augnet_optim() how to optimize augnet? zero_grad?
+
+
 
                         
                     
@@ -283,7 +324,7 @@ class Exp(object):
                         break
                     epoch_log.write("----------------------------------------------------------------------------------------\n")
                     epoch_log.flush()
-                    train_loader = self._get_data(dataset, flag = 'train', weighted_sampler = self.args.weighted_sampler, )
+                    train_loader = self._get_data(dataset, flag = 'train', weighted_sampler = self.args.weighted_sampler)
                     learning_rate_adapter(model_optim,vali_loss)
 
 
