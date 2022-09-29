@@ -6,6 +6,8 @@ import os
 import pickle
 from tqdm import tqdm
 from dataloaders.augmentation import mixup
+from dataloaders.augmentation import RandomAugment
+
 #from dataloaders.utils import PrepareWavelets,FiltersExtention
 # ----------------- har -----------------
 """
@@ -82,21 +84,8 @@ class data_set(Dataset):
         self.load_all = args.load_all
         self.data_x = dataset.normalized_data_x
         self.data_y = dataset.data_y
-        self.p = {
-            'jitter': 1.0,
-            'exponential_smoothing': 1.0,
-            'moving_average': 1.0,
-            'magnitude_scaling': 1.0,
-            'magnitude_warp': 1.0,
-            'magnitude_shift': 1.0,
-            'time_warp': 1.0,
-            'window_warp': 1.0,
-            'window_slice': 1.0,
-            'random_sampling': 1.0,
-            'slope_adding': 1.0,
-        }
-        self.mixup_combinations_per_idx = {}
-        self.used_randaugs_per_idx = {}
+        # print(self.args)
+
         if flag in ["train","vali"]:
             self.slidingwindows = dataset.train_slidingwindows
         else:
@@ -192,19 +181,15 @@ class data_set(Dataset):
             
             other_encoded_y = self.one_hot_encoding[self.data_y.iloc[other_start:other_end].mode().loc[0]]
             
-            mixup_x = mixup(sample_x, other_x, 0.6)
+            mixup_x = mixup(sample_x, other_x, self.args.mixup_lambda)
             mixup_x = np.expand_dims(mixup_x, 0)
-            mixup_y = mixup(encoded_y, other_encoded_y, 0.6)
+            mixup_y = mixup(encoded_y, other_encoded_y, self.args.mixup_lambda)
 
-            from dataloaders.augmentation import RandomAugment
-
-            aug_count = np.random.randint(0, 1)
+            aug_count = np.random.randint(0, self.args.max_randaug_cnt)
             # print('aug_count', aug_count)
-            randaug = RandomAugment(aug_count, self.p)
-            aug_sample_x, used_augs = randaug(sample_x[0])
+            randaug = RandomAugment(aug_count, self.args.p)
+            aug_sample_x = randaug(sample_x[0])
             
-            self.used_randaugs_per_idx[index] = used_augs
-            self.mixup_combinations_per_idx[index] = rand_idx
             # return (sample_x, aug_sample_x), sample_y, sample_y
             
             return aug_sample_x, mixup_y, mixup_y

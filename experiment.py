@@ -76,8 +76,7 @@ class Exp(object):
             shuffle_flag = True 
         else:
             shuffle_flag = False
-
-        data  = data_set(self.args,data,flag)
+        data  = data_set(self.args, data, flag)
         if weighted_sampler and flag == 'train':
 
             sampler = WeightedRandomSampler(
