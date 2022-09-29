@@ -402,7 +402,7 @@ class Exp(object):
                 total_loss.append(loss.cpu())
 				
                 preds.extend(list(np.argmax(outputs.detach().cpu().numpy(),axis=1)))
-                trues.extend(list(np.argmax(batch_y.detach().cpu().numpy(),axis=1)))  # not sure about the side-effects
+                trues.extend(list(np.argmax(batch_y.detach().cpu().numpy(),axis=1)))
 				
         total_loss = np.average(total_loss)
         # print(type(preds))
