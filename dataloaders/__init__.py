@@ -171,11 +171,15 @@ class data_set(Dataset):
                 sample_x = self.data_x.iloc[start_index:end_index, 1:-1].values
                 other_x = self.data_x.iloc[other_start:other_end, 1:-1].values
 
-            # sample_y = self.class_transform[self.data_y.iloc[start_index:end_index].mode().loc[0]]
+            sample_y = self.class_transform[self.data_y.iloc[start_index:end_index].mode().loc[0]]
             encoded_y = self.one_hot_encoding[self.data_y.iloc[start_index:end_index].mode().loc[0]]
             
             sample_x = np.expand_dims(sample_x,0)
-            
+            # print('shape x', sample_x.shape)
+            # print('shape y', sample_y)
+            zort = RandomAugment.slope_adding(sample_x[0])
+            return sample_x, sample_y, sample_y
+
             if self.flag != 'train':
                 return sample_x, encoded_y, encoded_y
             
@@ -191,7 +195,7 @@ class data_set(Dataset):
             aug_sample_x = randaug(sample_x[0])
             
             # return (sample_x, aug_sample_x), sample_y, sample_y
-            
+            print('aug', aug_sample_x.shape)
             return aug_sample_x, mixup_y, mixup_y
             
 

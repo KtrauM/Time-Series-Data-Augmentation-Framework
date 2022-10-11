@@ -287,9 +287,10 @@ class RandomAugment(object):
         import random
 
         x = x.transpose()
-        anchor = random.randint(0, x.shape[1])
-        # print(anchor)
-        anchor = 80
+        anchor = np.random.randint(0, x.shape[1])
+        print(x.shape)
+        print(anchor)
+        # anchor = 80
         ret = np.zeros_like(x)
         for dim in range(x.shape[0]):
             slope = slope / x.shape[1]
