@@ -7,6 +7,8 @@ import pickle
 from tqdm import tqdm
 from dataloaders.augmentation import mixup
 from dataloaders.augmentation import RandomAugment
+import matplotlib.pyplot as plt
+import matplotlib.ticker as plticker
 
 #from dataloaders.utils import PrepareWavelets,FiltersExtention
 # ----------------- har -----------------
@@ -177,8 +179,50 @@ class data_set(Dataset):
             sample_x = np.expand_dims(sample_x,0)
             # print('shape x', sample_x.shape)
             # print('shape y', sample_y)
-            zort = RandomAugment.slope_adding(sample_x[0])
-            return sample_x, sample_y, sample_y
+
+            # acc_cols = ['acc_x', 'acc_y', 'acc_z']
+            acc_cols = ['acc_x']
+            colors = {'acc_x': 'red', 'acc_y': 'green', 'acc_z': 'blue'}
+            # augcolor = {'acc_x':}
+            wsliced_x = RandomAugment.window_slice(sample_x[0])
+            jitter_x = RandomAugment.jitter(sample_x[0], 0.5)
+            expsmo_x = RandomAugment.exponential_smoothing(sample_x[0])
+            movavg_x = RandomAugment.moving_average(sample_x[0])
+            magscl_x = RandomAugment.magnitude_scaling(sample_x[0])
+            magwrp_x = RandomAugment.magnitude_warp(sample_x[0]) 
+            magshf_x = RandomAugment.magnitude_shift(sample_x[0])
+            tmewrp_x = RandomAugment.time_warp(sample_x[0]) 
+            wndwrp_x = RandomAugment.window_warp(sample_x[0])
+            wndslc_x = RandomAugment.window_slice(sample_x[0]) 
+            rndsmp_x = RandomAugment.random_sampling(sample_x[0]) 
+            slpadd_x = RandomAugment.slope_adding(sample_x[0])
+            for idx,col in enumerate(acc_cols):
+                plt.figure(figsize=(10,5))
+                plt.plot(sample_x[0][:,idx],c = 'blue', linewidth=2, label=col,)
+                # plt.plot(jitter_x[:,idx], c = 'red', linewidth=2, label='jitter_' + col, )
+                # plt.plot(expsmo_x[:,idx], c = 'red', linewidth=2, label='expsmo_' + col, )
+                # plt.plot(movavg_x[:,idx], c = 'red', linewidth=2, label='movavg_' + col, )
+                # plt.plot(magscl_x[:,idx], c = 'red', linewidth=2, label='magscl_' + col, )
+                # plt.plot(magwrp_x[:,idx], c = 'red', linewidth=2, label='magwrp_' + col, )
+                # plt.plot(magshf_x[:,idx], c = 'red', linewidth=2, label='magshf_' + col, )
+                # plt.plot(tmewrp_x[:,idx], c = 'red', linewidth=2, label='tmewrp_' + col, )
+                # plt.plot(wndwrp_x[:,idx], c = 'red', linewidth=2, label='wndwrp_' + col, )
+                # plt.plot(wndslc_x[:,idx], c = 'red', linewidth=2, label='wndscl_' + col, )
+                # plt.plot(rndsmp_x[:,idx], c = 'red', linewidth=2, label='rndsmp_' + col, )
+                # plt.plot(slpadd_x[:,idx], c = 'red', linewidth=2, label='slpadd_' + col, )
+                plt.yticks(np.arange(0, 2, step=0.5)) 
+                plt.legend(fontsize=14)
+                plt.tight_layout()
+                plt.xticks(fontsize=12)
+                plt.yticks(fontsize=12)
+               
+                # plt.gca().yaxis.set_major_locator(plt.MultipleLocator(0.5))
+                # plt.show()
+                plt.savefig(r'C:\Users\Murat\Desktop\Bachelor\augplots\original.svg', dpi=500)
+                # plt.savefig(r'C:\Users\Murat\Desktop\Bachelor\augplots\expsmo.svg', dpi=500)
+
+                
+            return (-1, -1), -1, -1
 
             if self.flag != 'train':
                 return sample_x, encoded_y, encoded_y
