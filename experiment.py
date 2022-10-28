@@ -102,28 +102,24 @@ class Exp(object):
         if self.args.model_type == "deepconvlstm":
             config_file = open('../../configs/model.yaml', mode='r')
             config = yaml.load(config_file, Loader=yaml.FullLoader)["deepconvlstm"]
-            setting = "deepconvlstm_data_{}_seed_{}_windowsize_{}_waveFilter_{}_Fscaling_{}_cvfilter_{}_lstmfilter_{}_Regu_{}_wavelearnble_{}".format(self.args.data_name,
+            setting = "deepconvlstm_data_{}_seed_{}_windowsize_{}_chnlaug{}_rndaug{}_mixup{}_rndaugcnt{}_mixup_p{}_usedrnd{}".format(self.args.data_name,
                                                                                                                                                         self.args.seed,
                                                                                                                                                         self.args.windowsize,
-                                                                                                                                                        self.args.wavelet_filtering,
-                                                                                                                                                        self.args.filter_scaling_factor,
-                                                                                                                                                        config["nb_filters"],
-                                                                                                                                                        config["nb_units_lstm"],
-                                                                                                                                                        self.args.wavelet_filtering_regularization,
-                                                                                                                                                        self.args.wavelet_filtering_learnable )
+                                                                                                                                                        self.args.difference,
+                                                                                                                                                        self.args.p['argv'],
+                                                                                                                                                        self.args.mixup_lambda,
+                                                                                                                                                        self.args.max_randaug_cnt, self.args.mixup_p, self.args.predef_rndaug)
             return setting
         elif self.args.model_type == "attend":
             config_file = open('../../configs/model.yaml', mode='r')
             config = yaml.load(config_file, Loader=yaml.FullLoader)["attend"]
-            setting = "attend_data_{}_seed_{}_windowsize_{}_waveFilter_{}_Fscaling_{}_cvfilter_{}_grufilter_{}_Regu_{}_wavelearnble_{}".format(self.args.data_name,
+            setting = "attend_data_{}_seed_{}_windowsize_{}_chnlaug{}_rndaug{}_mixup{}_rndaugcnt{}_mixup_p{}_usedrnd{}".format(self.args.data_name,
                                                                                                                                                self.args.seed,
                                                                                                                                                self.args.windowsize,
-                                                                                                                                               self.args.wavelet_filtering,
-                                                                                                                                               self.args.filter_scaling_factor,
-                                                                                                                                               config["filter_num"],
-                                                                                                                                               config["hidden_dim"],
-                                                                                                                                               self.args.wavelet_filtering_regularization,
-                                                                                                                                               self.args.wavelet_filtering_learnable)
+                                                                                                                                               self.args.difference,
+                                                                                                                                               self.args.p['argv'],
+                                                                                                                                               self.args.mixup_lambda,
+                                                                                                                                               self.args.max_randaug_cnt, self.args.mixup_p, self.args.predef_rndaug)
             return setting
         else:
             raise NotImplementedError
@@ -171,7 +167,6 @@ class Exp(object):
             test_loader   = self._get_data(dataset, flag = 'test', weighted_sampler = self.args.weighted_sampler)
             #class_weights=torch.tensor(dataset.act_weights,dtype=torch.double).to(self.device)
             train_steps = len(train_loader)
-
             if not os.path.exists(cv_path):
                 os.makedirs(cv_path)
                 skip_train = False
@@ -257,7 +252,7 @@ class Exp(object):
                             criterion = MixUpLoss(criterion)
                             loss = criterion(outputs, batch_y)
                         else:
-                            loss = criterion(outputs, batch_y)
+                            loss = criterion(outputs, batch_y.argmax(dim=1))
 
                         if self.args.wavelet_filtering and self.args.wavelet_filtering_regularization:
                             raise NotImplementedError()
@@ -397,7 +392,7 @@ class Exp(object):
                 pred = outputs.detach()#.cpu()
                 true = batch_y.detach()#.cpu()
 
-                loss = criterion(pred, true) 
+                loss = criterion(pred, true.argmax(dim=1)) 
                 total_loss.append(loss.cpu())
 				
                 preds.extend(list(np.argmax(outputs.detach().cpu().numpy(),axis=1)))

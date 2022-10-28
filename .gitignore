@@ -1,1 +1,8 @@
 *.pyc
+/saved_models_
+*.err
+*.out
+*.txt
+*.pth
+*.pickle
+.DS_Store
