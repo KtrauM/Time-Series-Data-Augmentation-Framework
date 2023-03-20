@@ -1,1 +1,6 @@
 *.pyc
+/saved_models*
+.ipynb_checkpoints/*
+notebooks/model/**/AugFramework*.err
+notebooks/model/**/AugFramework*.out
+.DS_Store

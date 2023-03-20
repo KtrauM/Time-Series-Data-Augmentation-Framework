@@ -1,0 +1,23 @@
+#!/bin/sh
+
+sbatch script2.py hapt False 0.0 0.5 1 0.1 attend undef
+sbatch script3.py hapt False 0.0 0.5 1 0.1 attend undef
+sbatch script4.py hapt False 0.0 0.5 1 0.1 attend undef
+
+sbatch script2.py hapt False 0.0 0.5 1 0.1 deepconvlstm undef
+sbatch script3.py hapt False 0.0 0.5 1 0.1 deepconvlstm undef
+sbatch script4.py hapt False 0.0 0.5 1 0.1 deepconvlstm undef
+
+sbatch script2.py pamap2 False 0.0 0.5 1 0.1 attend undef
+sbatch script3.py pamap2 False 0.0 0.5 1 0.1 attend undef
+sbatch script4.py pamap2 False 0.0 0.5 1 0.1 attend undef
+
+sbatch script2.py pamap2 False 0.0 0.5 1 0.1 deepconvlstm undef
+sbatch script3.py pamap2 False 0.0 0.5 1 0.1 deepconvlstm undef
+sbatch script4.py pamap2 False 0.0 0.5 1 0.1 deepconvlstm undef
+
+
+
+
+
+

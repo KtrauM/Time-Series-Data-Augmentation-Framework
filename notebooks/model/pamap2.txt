@@ -1,0 +1,76 @@
+#!/bin/sh
+
+
+# default config
+#             dataset chnl rndp a rndc mixupp
+sbatch script3.py hapt True 1.00 0.5 3 0.1 attend undef
+
+# change randaug application probabilities
+sbatch script3.py hapt True 0.25 0.5 3 0.1 attend undef
+sbatch script3.py hapt True 0.50 0.5 3 0.1 attend undef
+sbatch script3.py hapt True 0.75 0.5 3 0.1 attend undef
+
+# change mixup probabilities
+# no mixup
+sbatch script3.py hapt True 1.00 0.5 3 0.00 attend undef
+sbatch script3.py hapt True 1.00 0.5 3 0.05 attend undef
+#sbatch script3.py hapt True 1.00 0.5 3 0.10 attend undef
+sbatch script3.py hapt True 1.00 0.5 3 0.15 attend undef
+sbatch script3.py hapt True 1.00 0.5 3 0.20 attend undef
+sbatch script3.py hapt True 1.00 0.5 3 0.25 attend undef
+sbatch script3.py hapt True 1.00 0.5 3 0.75 attend undef
+
+## change max randaug applications (upper limit is exluded, for max=2 possible values are 0,1)
+# no randaug
+sbatch script3.py hapt True 1.00 0.5 1 0.1 attend undef
+
+sbatch script3.py hapt True 1.00 0.5 2 0.1 attend undef
+sbatch script3.py hapt True 1.00 0.5 4 0.1 attend undef
+sbatch script3.py hapt True 1.00 0.5 5 0.1 attend undef
+
+# change mixup alpha hyperparameter
+sbatch script3.py hapt True 1.00 0.4 3 0.1 attend undef
+sbatch script3.py hapt True 1.00 0.8 3 0.1 attend undef
+
+# no chnl
+sbatch script3.py hapt False 1.00 0.5 3 0.1 attend undef
+
+# only chnl
+sbatch script3.py hapt True 0.00 0.5 1 0.0 attend undef
+
+# only mixup
+sbatch script3.py hapt False 0.00 0.5 1 1.0 attend undef
+
+# only rndaugs ----------- last did this one
+sbatch script3.py hapt False 1.00 0.5 3 0.0 attend undef
+
+# baseline hapt
+sbatch script3.py hapt False 0.00 0.5 1 0.00 attend undef
+
+# use single randaugs 
+
+###### hapt single randaugs
+#sbatch script3.py hapt True 1.00 0.5 3 0.10 attend jitter
+
+#sbatch script3.py hapt True 1.00 0.5 3 0.10 attend moving_average
+
+#sbatch script3.py hapt True 1.00 0.5 3 0.10 attend magnitude_scaling
+
+#sbatch script3.py hapt True 1.00 0.5 3 0.10 attend window_warp
+
+#sbatch script3.py hapt True 1.00 0.5 3 0.10 attend exponential_smoothing
+
+#sbatch script3.py hapt True 1.00 0.5 3 0.10 attend magnitude_warp
+
+#sbatch script3.py hapt True 1.00 0.5 3 0.10 attend magnitude_shift
+
+#sbatch script3.py hapt True 1.00 0.5 3 0.10 attend time_warp
+
+#sbatch script3.py hapt True 1.00 0.5 3 0.10 attend window_slice
+
+#sbatch script3.py hapt True 1.00 0.5 3 0.10 attend random_sampling
+
+#sbatch script3.py hapt True 1.00 0.5 3 0.10 attend slope_adding
+
+
+

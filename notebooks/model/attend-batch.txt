@@ -1,0 +1,139 @@
+#!/bin/sh
+
+# default config
+#             dataset chnl rndp a rndc mixupp
+sbatch script2.py hapt True 1.00 0.5 3 0.5 deepconvlstm undef
+
+# change randaug application probabilities
+sbatch script2.py hapt True 0.25 0.5 3 0.5 deepconvlstm undef
+sbatch script2.py hapt True 0.50 0.5 3 0.5 deepconvlstm undef
+sbatch script2.py hapt True 0.75 0.5 3 0.5 deepconvlstm undef
+
+# change mixup probabilities
+# no mixup
+sbatch script2.py hapt True 1.00 0.5 3 0.00 deepconvlstm undef
+sbatch script2.py hapt True 1.00 0.5 3 0.05 deepconvlstm undef
+sbatch script2.py hapt True 1.00 0.5 3 0.10 deepconvlstm undef
+sbatch script2.py hapt True 1.00 0.5 3 0.15 deepconvlstm undef
+sbatch script2.py hapt True 1.00 0.5 3 0.20 deepconvlstm undef
+sbatch script2.py hapt True 1.00 0.5 3 0.25 deepconvlstm undef
+sbatch script2.py hapt True 1.00 0.5 3 0.75 deepconvlstm undef
+
+## change max randaug applications (upper limit is exluded, for max=2 possible values are 0,1)
+# no randaug
+sbatch script2.py hapt True 1.00 0.5 1 0.5 deepconvlstm undef
+
+sbatch script2.py hapt True 1.00 0.5 2 0.5 deepconvlstm undef
+sbatch script2.py hapt True 1.00 0.5 4 0.5 deepconvlstm undef
+sbatch script2.py hapt True 1.00 0.5 5 0.5 deepconvlstm undef
+
+# change mixup alpha hyperparameter
+sbatch script2.py hapt True 1.00 0.4 3 0.5 deepconvlstm undef
+sbatch script2.py hapt True 1.00 0.8 3 0.5 deepconvlstm undef
+
+# no chnl
+sbatch script2.py hapt False 1.00 0.5 3 0.5 deepconvlstm undef
+
+# only chnl
+sbatch script2.py hapt True 0.00 0.5 1 0.0 deepconvlstm undef
+
+# only mixup
+sbatch script2.py hapt False 0.00 0.5 1 1.0 deepconvlstm undef
+
+# only rndaugs ----------- last did this one
+sbatch script2.py hapt False 1.00 0.5 3 0.0 deepconvlstm undef
+
+# opportunity - fails
+# sbatch script2.py oppo True 1.00 0.5 3 0.5 deepconvlstm undef
+
+# pamap2 - done
+sbatch script2.py pamap2 True 1.00 0.5 3 0.5 deepconvlstm undef
+
+# pamap2 baseline
+sbatch script2.py pamap2 False 0.00 0.5 1 0.00 deepconvlstm undef
+
+# pamap2 no mixup
+sbatch script2.py pamap2 True 1.00 0.5 3 0.00 deepconvlstm undef
+
+# pamap2 mixup probs
+sbatch script2.py pamap2 True 1.00 0.5 3 0.25 deepconvlstm undef
+sbatch script2.py pamap2 True 1.00 0.5 3 0.75 deepconvlstm undef
+
+# pamap2 only channel
+sbatch script2.py pamap2 True 1.00 0.5 1 0.00 deepconvlstm undef
+
+# pamap2 only randaug
+sbatch script2.py pamap2 False 1.00 0.5 3 0.00 deepconvlstm undef
+
+# pamap2 no randaug
+sbatch script2.py pamap2 True 1.00 0.5 1 0.25 deepconvlstm undef
+sbatch script2.py pamap2 True 1.00 0.5 1 0.50 deepconvlstm undef
+sbatch script2.py pamap2 True 1.00 0.5 1 0.75 deepconvlstm undef
+
+# skodar
+# sbatch script2.py skodar True 1.00 0.5 3 0.5 deepconvlstm undef
+
+# baseline hapt
+sbatch script2.py hapt False 0.00 0.5 1 0.00 deepconvlstm undef
+
+# use single randaugs 
+
+###### hapt single randaugs
+sbatch script2.py hapt True 1.00 0.5 3 0.10 deepconvlstm jitter
+
+sbatch script2.py hapt True 1.00 0.5 3 0.10 deepconvlstm moving_average
+
+sbatch script2.py hapt True 1.00 0.5 3 0.10 deepconvlstm magnitude_scaling
+
+sbatch script2.py hapt True 1.00 0.5 3 0.10 deepconvlstm window_warp
+
+sbatch script2.py hapt True 1.00 0.5 3 0.10 deepconvlstm exponential_smoothing
+
+sbatch script2.py hapt True 1.00 0.5 3 0.10 deepconvlstm magnitude_warp
+
+sbatch script2.py hapt True 1.00 0.5 3 0.10 deepconvlstm magnitude_shift
+
+sbatch script2.py hapt True 1.00 0.5 3 0.10 deepconvlstm time_warp
+
+sbatch script2.py hapt True 1.00 0.5 3 0.10 deepconvlstm window_slice
+
+sbatch script2.py hapt True 1.00 0.5 3 0.10 deepconvlstm random_sampling
+
+sbatch script2.py hapt True 1.00 0.5 3 0.10 deepconvlstm slope_adding
+
+###### pamap single randaugs
+
+# use only jitter on adhoc best try
+sbatch script2.py pamap2 True 1.00 0.5 3 0.5 deepconvlstm jitter
+
+# moving average
+sbatch script2.py pamap2 True 1.00 0.5 3 0.5 deepconvlstm moving_average
+
+# magnitude scaling
+sbatch script2.py pamap2 True 1.00 0.5 3 0.5 deepconvlstm magnitude_scaling
+
+# window warping
+sbatch script2.py pamap2 True 1.00 0.5 3 0.5 deepconvlstm window_warp
+
+# exponential smoothing
+sbatch script2.py pamap2 True 1.00 0.5 3 0.5 deepconvlstm exponential_smoothing
+
+# magnitude warping
+sbatch script2.py pamap2 True 1.00 0.5 3 0.5 deepconvlstm magnitude_warp
+
+# magnitude shift
+sbatch script2.py pamap2 True 1.00 0.5 3 0.5 deepconvlstm magnitude_shift
+
+# time warping
+sbatch script2.py pamap2 True 1.00 0.5 3 0.5 deepconvlstm time_warp
+
+# window slicing
+sbatch script2.py pamap2 True 1.00 0.5 3 0.5 deepconvlstm window_slice
+
+# random sampling
+sbatch script2.py pamap2 True 1.00 0.5 3 0.5 deepconvlstm random_sampling
+
+# slope adding
+sbatch script2.py pamap2 True 1.00 0.5 3 0.5 deepconvlstm slope_adding
+
+
